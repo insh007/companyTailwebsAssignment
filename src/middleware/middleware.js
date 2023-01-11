@@ -27,7 +27,7 @@ const authentication = async function(req,res,next){
 
 const authorization = async function(req,res,next){
     try{
-        let userId = req.params.userId
+        let userId = req.params.teacherId
 
         if(!(isValidObjectId(userId)))return res.status(404).send({status:false, msg:`Invalid mongodb Id- ${userId}`})
     

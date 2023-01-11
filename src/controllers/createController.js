@@ -62,4 +62,94 @@ const createRecord = async function(req,res){
     }
 }
 
-module.exports = {createRecord}
+const getByFilter = async function(req,res){
+    try{
+
+        const {name, subject} = req.query
+        
+        if(name && subject){
+            let findData = await studentModel.find({name:name, subject:{$elemMatch:{name:subject}}})
+            return res.status(200).send({status:true, data:findData}) 
+        }
+    
+        if(subject){
+            let findData = await studentModel.find({subject:{$elemMatch:{name:subject}}})
+            return res.status(200).send({status:true, data:findData})    
+        }
+    
+        let filterObj = {
+            // isDeleted  : false
+        }
+
+        if(name){
+            filterObj.name = name
+        }
+
+        const getList =  await studentModel.find(filterObj)
+
+        return res.status(200).send({status:true, data:getList})
+    }
+    catch(err){
+        return res.status(500).send({status:false, msg:err.message})
+    }
+}
+
+const updateRecord = async function(req,res){
+    try{
+
+        let {name, subject, subjectMarks, rollNo} = req.body
+
+        if(!rollNo)return res.status(400).send({status:false, msg:"rollNo is required to update data"})
+
+        if(subject && name){
+            if(!subjectMarks)return res.status(400).send({status:false, msg:"please provide subject marks to update"})
+            let updateData = await studentModel.findOneAndUpdate(
+                {rollNo:rollNo, "subject.name":subject},
+                {$set:{"subject.$.marks":subjectMarks, name:name}},
+                {new:true}
+                )
+            return res.status(200).send({status:true, data:updateData}) 
+        }
+
+        if(subject){
+            if(!subjectMarks)return res.status(400).send({status:false, msg:"please provide subject marks to update"})
+            let updateData = await studentModel.findOneAndUpdate(
+                {rollNo:rollNo, "subject.name":subject},
+                {"subject.$.marks":subjectMarks},
+                {new:true}
+                )
+            return res.status(200).send({status:true, data:updateData}) 
+        }
+        
+        if(name){
+            let updateData = await studentModel.findOneAndUpdate(
+                {rollNo:rollNo},
+                {name:name},
+                {new:true}
+            )
+            return res.status(200).send({status:true, data:updateData}) 
+        }
+    }
+    catch(err){
+        return res.status(500).send({status:false, msg:err.message})
+    }
+}
+
+const flagDelete = async function(req,res){
+    try{
+        let {rollNo} = req.body
+
+        let findRecord = await studentModel.findOne({rollNo:rollNo})
+        if(!findRecord)return res.status(404).send({status:false, msg:`No record exists for ${rollNo} rollNo`})
+
+        if(findRecord.isDeleted==true)return res.status(404).send({status:false, msg:`record is already deleted for ${rollNo} rollNo`})
+
+        await studentModel.findOneAndUpdate({rollNo:rollNo},{isDeleted:true})
+        return res.status(200).send({status:true, msg:"Deleted successfully"})
+    }
+    catch(err){
+        return res.status(500).send({status:false, msg:err.message})
+    }
+}
+
+module.exports = {createRecord, getByFilter, flagDelete, updateRecord}
